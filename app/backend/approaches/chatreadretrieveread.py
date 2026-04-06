@@ -385,10 +385,17 @@ class ChatReadRetrieveReadApproach(Approach):
             if search_image_embeddings:
                 vectors.append(await self.compute_multimodal_embedding(query_text))
 
-        results = await self.search(
-            top,
+        # Dual search strategy: Retrieve extra results and filter by file type in Python
+        # Retrieve more results (20) to ensure we get both PDFs and JSONs, then filter to top 3 of each
+        # This ensures both manual documentation and webinar transcripts are included
+        sources_per_type = 3
+        initial_top = 20  # Retrieve more results to filter from
+        
+        filter = self.build_filter(overrides)
+        all_results = await self.search(
+            initial_top,
             query_text,
-            search_index_filter,
+            filter,
             vectors,
             use_text_search,
             use_vector_search,
@@ -399,6 +406,13 @@ class ChatReadRetrieveReadApproach(Approach):
             use_query_rewriting,
             access_token,
         )
+        
+        # Filter results by file type in Python (to avoid OData filter limitations)
+        pdf_results = [r for r in all_results if r.sourcefile and r.sourcefile.lower().endswith(".pdf")][:sources_per_type]
+        json_results = [r for r in all_results if r.sourcefile and r.sourcefile.lower().endswith(".json")][:sources_per_type]
+        
+        # Merge results: top 3 PDFs + top 3 JSONs
+        results = pdf_results + json_results
 
         # STEP 3: Generate a contextual and content specific answer using the search results and chat history
         data_points = await self.get_sources_content(
@@ -421,18 +435,22 @@ class ChatReadRetrieveReadApproach(Approach):
                     reasoning_effort=rewrite_result.reasoning_effort,
                 ),
                 ThoughtStep(
-                    "Search using generated search query",
+                    "Dual search strategy: PDFs + JSON transcripts",
                     query_text,
                     {
                         "use_semantic_captions": use_semantic_captions,
                         "use_semantic_ranker": use_semantic_ranker,
                         "use_query_rewriting": use_query_rewriting,
-                        "top": top,
-                        "filter": search_index_filter,
+                        "sources_per_type": sources_per_type,
+                        "initial_results": initial_top,
+                        "filter": filter,
                         "use_vector_search": use_vector_search,
                         "use_text_search": use_text_search,
                         "search_text_embeddings": search_text_embeddings,
                         "search_image_embeddings": search_image_embeddings,
+                        "total_sources": len(results),
+                        "pdf_sources": len(pdf_results),
+                        "json_sources": len(json_results),
                     },
                 ),
                 ThoughtStep(

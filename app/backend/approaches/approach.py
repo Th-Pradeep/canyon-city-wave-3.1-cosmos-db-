@@ -282,7 +282,7 @@ class Approach(ABC):
         self.global_blob_manager = global_blob_manager
         self.user_blob_manager = user_blob_manager
 
-    def build_filter(self, overrides: dict[str, Any]) -> Optional[str]:
+    def build_filter(self, overrides: dict[str, Any], source_file_extension: Optional[str] = None) -> Optional[str]:
         include_category = overrides.get("include_category")
         exclude_category = overrides.get("exclude_category")
         filters = []
@@ -290,6 +290,9 @@ class Approach(ABC):
             filters.append("category eq '{}'".format(include_category.replace("'", "''")))
         if exclude_category:
             filters.append("category ne '{}'".format(exclude_category.replace("'", "''")))
+        if source_file_extension:
+            # Use OData endswith function for filterable (non-searchable) fields
+            filters.append(f"endswith(sourcefile, '{source_file_extension}')")
         return None if not filters else " and ".join(filters)
 
     async def search(

@@ -20,6 +20,16 @@
     padding-bottom: 1em;
 }
 
+.answerText a {
+    color: #123bb6;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.answerText a:hover {
+    text-decoration: underline;
+}
+
 .answerText h1,
 h2,
 h2 {

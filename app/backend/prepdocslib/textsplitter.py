@@ -589,7 +589,7 @@ class SimpleTextSplitter(TextSplitter):
     This is required because embedding models may not be able to analyze an entire page at once
     """
 
-    def __init__(self, max_object_length: int = 1000):
+    def __init__(self, max_object_length: int = 3000):
         self.max_object_length = max_object_length
 
     def split_pages(self, pages: list[Page]) -> Generator[Chunk, None, None]:

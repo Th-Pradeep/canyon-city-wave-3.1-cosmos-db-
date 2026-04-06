@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "functionAppName": {
+      "value": "func-timer-ingestion-104"
+    },
+    "appServicePlanName": {
+      "value": "asp-timer-ingestion-104"
+    },
+    "functionStorageAccountName": {
+      "value": "stfuncthping104"
+    },
+    "appInsightsName": {
+      "value": "appi-uaxsjqhqm7d56"
+    },
+    "dataStorageAccountName": {
+      "value": "stuaxsjqhqm7d56"
+    },
+    "dataStorageContainerName": {
+      "value": "content"
+    },
+    "searchServiceName": {
+      "value": "gptkb-uaxsjqhqm7d56"
+    },
+    "searchIndexName": {
+      "value": "gptkbindex"
+    },
+    "openAiServiceName": {
+      "value": "cog-uaxsjqhqm7d56"
+    },
+    "documentIntelligenceServiceName": {
+      "value": "cog-di-uaxsjqhqm7d56"
+    },
+    "location": {
+      "value": "eastus"
+    },
+    "subscriptionId": {
+      "value": "1a7c59cb-3691-41f9-b492-1e154c9f99b1"
+    },
+    "dataStorageResourceGroup": {
+      "value": "rg-azure-search-openai-demo"
+    }
+  }
+}

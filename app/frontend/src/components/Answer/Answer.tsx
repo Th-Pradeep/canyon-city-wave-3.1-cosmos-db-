@@ -103,7 +103,33 @@ export const Answer = ({
 
             <Stack.Item grow>
                 <div className={styles.answerText}>
-                    <ReactMarkdown children={sanitizedAnswerHtml} rehypePlugins={[rehypeRaw]} remarkPlugins={[remarkGfm]} />
+                    <ReactMarkdown 
+                        children={sanitizedAnswerHtml} 
+                        rehypePlugins={[rehypeRaw]} 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                            a: ({ href, children }) => {
+                                // Check if this is a video link (ReliaTrax URL)
+                                const isVideoLink = href?.includes('reliatrax.com/post');
+                                
+                                if (isVideoLink) {
+                                    // Video links: open in new tab
+                                    return (
+                                        <a 
+                                            href={href} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                        >
+                                            {children}
+                                        </a>
+                                    );
+                                } else {
+                                    // Other links: keep default behavior (same tab)
+                                    return <a href={href}>{children}</a>;
+                                }
+                            }
+                        }}
+                    />
                 </div>
             </Stack.Item>
 
