@@ -141,6 +141,10 @@ export const Answer = ({
                             const isWeb = citation.isWeb;
                             const displayIndex = citation.index;
                             const reference = citation.reference;
+                            // Remove .json extension and version numbers from PDF files in display name
+                            let displayName = reference.endsWith('.json') ? reference.slice(0, -5) : reference;
+                            // Remove version pattern like _v3.26 from PDF filenames (e.g., "Help Manual_v3.26.pdf" -> "Help Manual.pdf")
+                            displayName = displayName.replace(/_v[\d.]+\.pdf/i, '.pdf');
                             if (isWeb) {
                                 // Attempt to find the matching web data point to retrieve its title
                                 const webEntry = answer.context.data_points.external_results_metadata?.find(w => w.url === reference);
@@ -164,7 +168,7 @@ export const Answer = ({
                                                 onCitationClicked(path);
                                             }}
                                         >
-                                            {`${displayIndex}. ${reference}`}
+                                            {`${displayIndex}. ${displayName}`}
                                         </a>
                                     </span>
                                 );

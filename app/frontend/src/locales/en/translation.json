@@ -39,17 +39,17 @@
         "1": "How do I check-in a group?",
         "2": "Where can I find archived client document?",
         "3": "How do I manage my testing hours?",
-        "placeholder": "Type a new question (e.g. does my plan cover annual eye exams?)"
+        "placeholder": "Type a new question (e.g. how do you check in a client?)"
     },
     "askTitle": "Ask your data",
     "multimodalExamples": {
         "1": "Compare the impact of interest rates and GDP in financial markets.",
         "2": "What is the expected trend for the S&P 500 index over the next five years? Compare it to the past S&P 500 performance",
         "3": "Can you identify any correlation between oil prices and stock market trends?",
-        "placeholder": "Example: Does my plan cover annual eye exams?"
+        "placeholder": "Example: How do you check in a client?"
     },
     "generatingAnswer": "Generating answer",
-    "citationWithColon": "Citation:",
+    "citationWithColon": "Click for more Information:",
     "followupQuestions": "Follow-up questions:",
 
     "tooltips": {

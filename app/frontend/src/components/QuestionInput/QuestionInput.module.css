@@ -13,6 +13,9 @@
     line-height: 2.5rem;
     max-height: 18rem;
     overflow-y: auto;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .questionInputButtonsContainer {

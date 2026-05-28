@@ -168,12 +168,15 @@ const renderCitation = (detail: CitationDetail, onCitationClicked: (citationFile
               : undefined;
     const supElement = <sup title={stepBadgeTitle ?? undefined}>{detail.index}</sup>;
 
+    // Remove version pattern from display title (e.g., "Help Manual_v3.26.pdf" -> "Help Manual.pdf")
+    const displayTitle = detail.reference.replace(/_v[\d.]+\.pdf/i, '.pdf');
+
     if (detail.isWeb) {
         return renderToStaticMarkup(
             <span className="citationBadgeContainer">
                 <a
                     className="supContainer"
-                    title={detail.reference}
+                    title={displayTitle}
                     href={detail.reference}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -190,7 +193,7 @@ const renderCitation = (detail: CitationDetail, onCitationClicked: (citationFile
         <span className="citationBadgeContainer">
             <a
                 className="supContainer"
-                title={detail.reference}
+                title={displayTitle}
                 onClick={e => {
                     e.preventDefault();
                     e.stopPropagation();
