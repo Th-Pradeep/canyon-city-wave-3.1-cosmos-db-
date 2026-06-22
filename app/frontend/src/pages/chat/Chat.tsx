@@ -7,7 +7,7 @@ import readNDJSONStream from "ndjson-readablestream";
 import appLogo from "../../assets/applogo.svg";
 import styles from "./Chat.module.css";
 
-import { chatApi, configApi, RetrievalMode, ChatAppResponse, ChatAppResponseOrError, ChatAppRequest, ResponseMessage, SpeechConfig } from "../../api";
+import { chatApi, configApi, getCitationFilePath, RetrievalMode, ChatAppResponse, ChatAppResponseOrError, ChatAppRequest, ResponseMessage, SpeechConfig } from "../../api";
 import { Answer, AnswerError, AnswerLoading } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
 import { ExampleList } from "../../components/Example";
@@ -55,6 +55,7 @@ const Chat = () => {
 
     const lastQuestionRef = useRef<string>("");
     const chatMessageStreamEnd = useRef<HTMLDivElement | null>(null);
+    const lastAutoOpenedAnswerIndexRef = useRef<number>(-1);
 
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isStreaming, setIsStreaming] = useState<boolean>(false);
@@ -162,7 +163,7 @@ const Chat = () => {
                     answer += newContent;
                     const latestResponse: ChatAppResponse = {
                         ...askResponse,
-                        message: { content: answer, role: askResponse.message.role }
+                        message: { content: answer, role: "assistant" }
                     };
                     setStreamedAnswers([...answers, [question, latestResponse]]);
                     resolve(null);
@@ -175,14 +176,27 @@ const Chat = () => {
                 if (signal.aborted) {
                     break;
                 }
-                if (event["context"] && event["context"]["data_points"]) {
+                // Handle new Response API format with "type" field
+                if (event["type"] === "response.context") {
+                    // Response API sends context in a typed event
+                    askResponse.context = { ...askResponse.context, ...event["context"] };
+                    if (event["session_state"]) {
+                        askResponse.session_state = event["session_state"];
+                    }
+                } else if (event["type"] === "response.output_text.delta") {
+                    // Response API sends delta as a string, not an object
+                    setIsLoading(false);
+                    await updateState(event["delta"]);
+                } else if (event["context"] && event["context"]["data_points"]) {
+                    // Legacy format: context with data_points (for backwards compatibility)
                     event["message"] = event["delta"];
                     askResponse = event as ChatAppResponse;
                 } else if (event["delta"] && event["delta"]["content"]) {
+                    // Legacy format: delta with nested content (for backwards compatibility)
                     setIsLoading(false);
                     await updateState(event["delta"]["content"]);
                 } else if (event["context"]) {
-                    // Update context with new keys from latest event
+                    // Legacy format: Update context with new keys from latest event
                     askResponse.context = { ...askResponse.context, ...event["context"] };
                 } else if (event["error"]) {
                     throw Error(event["error"]);
@@ -200,7 +214,7 @@ const Chat = () => {
         }
         const fullResponse: ChatAppResponse = {
             ...askResponse,
-            message: { content: answer, role: askResponse.message.role }
+            message: { content: answer, role: "assistant" }
         };
         return fullResponse;
     };
@@ -346,6 +360,7 @@ const Chat = () => {
 
     const clearChat = () => {
         lastQuestionRef.current = "";
+        lastAutoOpenedAnswerIndexRef.current = -1;
         error && setError(undefined);
         setActiveCitation(undefined);
         setActiveAnalysisPanelTab(undefined);
@@ -367,6 +382,57 @@ const Chat = () => {
     useEffect(() => {
         updateStreamingPreference(streamingEnabled, streamingDisabledByOverrides);
     }, [streamingDisabledByOverrides, streamingEnabled]);
+
+    // Auto-open Help Manual or transcript citation when response is fully generated
+    useEffect(() => {
+        if (!isLoading && !isStreaming && answers.length > 0) {
+            const latestAnswerIndex = answers.length - 1;
+            
+            // Only auto-open if we haven't already opened this answer
+            if (lastAutoOpenedAnswerIndexRef.current === latestAnswerIndex) {
+                return;
+            }
+            
+            const latestAnswer = answers[latestAnswerIndex][1];
+            const allCitations = latestAnswer.context?.data_points?.citations || [];
+            const answerText = latestAnswer.message?.content || "";
+            
+            // Extract citations that are actually USED in the answer text (appear in [brackets])
+            const usedCitations: string[] = [];
+            const citationMatches = answerText.matchAll(/\[([^\]]+)\]/g);
+            for (const match of citationMatches) {
+                const citationInText = match[1];
+                // Find the full citation that ends with this text
+                const fullCitation = allCitations.find(citation => citation.endsWith(citationInText));
+                if (fullCitation && !usedCitations.includes(fullCitation)) {
+                    usedCitations.push(fullCitation);
+                }
+            }
+            
+            // Priority 1: Find Help Manual citation in USED citations (case-insensitive)
+            let citationToOpen = usedCitations.find(citation => 
+                citation.toLowerCase().includes("help manual")
+            );
+            
+            // Priority 2: If no Help Manual, find transcript citation in USED citations
+            if (!citationToOpen) {
+                citationToOpen = usedCitations.find(citation => 
+                    citation.toLowerCase().includes("transcript")
+                );
+            }
+            
+            // Auto-open the citation if found
+            if (citationToOpen) {
+                const citationPath = getCitationFilePath(citationToOpen);
+                lastAutoOpenedAnswerIndexRef.current = latestAnswerIndex;
+                setTimeout(() => {
+                    setActiveCitation(citationPath);
+                    setActiveAnalysisPanelTab(AnalysisPanelTabs.CitationTab);
+                    setSelectedAnswer(latestAnswerIndex);
+                }, 300); // Small delay to ensure UI is ready
+            }
+        }
+    }, [answers, isLoading, isStreaming]);
 
     const handleSettingsChange = (field: string, value: any) => {
         switch (field) {
