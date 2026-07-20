@@ -355,7 +355,7 @@ python-dotenv==1.1.1
     # via
     #   -r requirements.in
     #   prompty
-pyyaml==6.0.2
+pyyaml==6.0.3
     # via prompty
 quart==0.20.0
     # via
