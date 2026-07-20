@@ -14,13 +14,6 @@ if [ "$AZURE_ENABLE_GLOBAL_DOCUMENT_ACCESS" = "true" ]; then
   fi
 fi
 
-if [ "$USE_CHAT_HISTORY_COSMOS" = "true" ]; then
-  if [ "$AZURE_USE_AUTHENTICATION" != "true" ]; then
-    echo "USE_CHAT_HISTORY_COSMOS is set to true, but AZURE_USE_AUTHENTICATION is not set to true. Please set and retry."
-    exit 1
-  fi
-fi
-
 if [ "$AZURE_USE_AUTHENTICATION" != "true" ]; then
   echo "AZURE_USE_AUTHENTICATION is not set, skipping authentication setup."
   exit 0

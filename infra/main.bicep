@@ -494,7 +494,7 @@ var appEnvVariables = {
   // Chat history settings
   USE_CHAT_HISTORY_BROWSER: useChatHistoryBrowser
   USE_CHAT_HISTORY_COSMOS: useChatHistoryCosmos
-  AZURE_COSMOSDB_ACCOUNT: (useAuthentication && useChatHistoryCosmos) ? cosmosDb!.outputs.name : ''
+  AZURE_COSMOSDB_ACCOUNT: useChatHistoryCosmos ? cosmosDb!.outputs.name : ''
   AZURE_CHAT_HISTORY_DATABASE: chatHistoryDatabaseName
   AZURE_CHAT_HISTORY_CONTAINER: chatHistoryContainerName
   AZURE_CHAT_HISTORY_VERSION: chatHistoryVersion
@@ -944,7 +944,7 @@ module userStorage 'core/storage/storage-account.bicep' = if (useUserUpload) {
   }
 }
 
-module cosmosDb 'br/public:avm/res/document-db/database-account:0.6.1' = if (useAuthentication && useChatHistoryCosmos) {
+module cosmosDb 'br/public:avm/res/document-db/database-account:0.6.1' = if (useChatHistoryCosmos) {
   name: 'cosmosdb'
   scope: cosmosDbResourceGroup
   params: {
@@ -972,18 +972,14 @@ module cosmosDb 'br/public:avm/res/document-db/database-account:0.6.1' = if (use
         containers: [
           {
             name: chatHistoryContainerName
-            kind: 'MultiHash'
+            kind: 'Hash'
             paths: [
-              '/entra_oid'
               '/session_id'
             ]
             indexingPolicy: {
               indexingMode: 'consistent'
               automatic: true
               includedPaths: [
-                {
-                  path: '/entra_oid/?'
-                }
                 {
                   path: '/session_id/?'
                 }
@@ -1116,7 +1112,7 @@ module searchSvcContribRoleUser 'core/security/role.bicep' = {
   }
 }
 
-module cosmosDbAccountContribRoleUser 'core/security/role.bicep' = if (useAuthentication && useChatHistoryCosmos) {
+module cosmosDbAccountContribRoleUser 'core/security/role.bicep' = if (useChatHistoryCosmos) {
   scope: cosmosDbResourceGroup
   name: 'cosmosdb-account-contrib-role-user'
   params: {
@@ -1128,14 +1124,14 @@ module cosmosDbAccountContribRoleUser 'core/security/role.bicep' = if (useAuthen
 
 // RBAC for Cosmos DB
 // https://learn.microsoft.com/azure/cosmos-db/nosql/security/how-to-grant-data-plane-role-based-access
-module cosmosDbDataContribRoleUser 'core/security/documentdb-sql-role.bicep' = if (useAuthentication && useChatHistoryCosmos) {
+module cosmosDbDataContribRoleUser 'core/security/documentdb-sql-role.bicep' = if (useChatHistoryCosmos) {
   scope: cosmosDbResourceGroup
   name: 'cosmosdb-data-contrib-role-user'
   params: {
-    databaseAccountName: (useAuthentication && useChatHistoryCosmos) ? cosmosDb!.outputs.name : ''
+    databaseAccountName: (useChatHistoryCosmos) ? cosmosDb!.outputs.name : ''
     principalId: principalId
     // Cosmos DB Built-in Data Contributor role
-    roleDefinitionId: (useAuthentication && useChatHistoryCosmos)
+    roleDefinitionId: (useChatHistoryCosmos)
       ? '/${subscription().id}/resourceGroups/${cosmosDb!.outputs.resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosDb!.outputs.name}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
       : ''
   }
@@ -1258,16 +1254,16 @@ module speechRoleBackend 'core/security/role.bicep' = {
 
 // RBAC for Cosmos DB
 // https://learn.microsoft.com/azure/cosmos-db/nosql/security/how-to-grant-data-plane-role-based-access
-module cosmosDbRoleBackend 'core/security/documentdb-sql-role.bicep' = if (useAuthentication && useChatHistoryCosmos) {
+module cosmosDbRoleBackend 'core/security/documentdb-sql-role.bicep' = if (useChatHistoryCosmos) {
   scope: cosmosDbResourceGroup
   name: 'cosmosdb-role-backend'
   params: {
-    databaseAccountName: (useAuthentication && useChatHistoryCosmos) ? cosmosDb!.outputs.name : ''
+    databaseAccountName: useChatHistoryCosmos ? cosmosDb!.outputs.name : ''
     principalId: (deploymentTarget == 'appservice')
       ? backend!.outputs.identityPrincipalId
       : acaBackend!.outputs.identityPrincipalId
     // Cosmos DB Built-in Data Contributor role
-    roleDefinitionId: (useAuthentication && useChatHistoryCosmos)
+    roleDefinitionId: useChatHistoryCosmos
       ? '/${subscription().id}/resourceGroups/${cosmosDb!.outputs.resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/${cosmosDb!.outputs.name}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002'
       : ''
   }
@@ -1349,7 +1345,7 @@ var otherPrivateEndpointConnections = (usePrivateEndpoint)
       {
         groupId: 'sql'
         dnsZoneName: 'privatelink.documents.azure.com'
-        resourceIds: (useAuthentication && useChatHistoryCosmos) ? [cosmosDb!.outputs.resourceId] : []
+        resourceIds: useChatHistoryCosmos ? [cosmosDb!.outputs.resourceId] : []
       }
     ]
   : []
@@ -1470,7 +1466,7 @@ output AZURE_SEARCH_SEMANTIC_RANKER string = actualSearchServiceSemanticRankerLe
 output AZURE_SEARCH_FIELD_NAME_EMBEDDING string = searchFieldNameEmbedding
 output AZURE_SEARCH_USER_ASSIGNED_IDENTITY_RESOURCE_ID string = searchService.outputs.userAssignedIdentityResourceId
 
-output AZURE_COSMOSDB_ACCOUNT string = (useAuthentication && useChatHistoryCosmos) ? cosmosDb!.outputs.name : ''
+output AZURE_COSMOSDB_ACCOUNT string = useChatHistoryCosmos ? cosmosDb!.outputs.name : ''
 output AZURE_CHAT_HISTORY_DATABASE string = chatHistoryDatabaseName
 output AZURE_CHAT_HISTORY_CONTAINER string = chatHistoryContainerName
 output AZURE_CHAT_HISTORY_VERSION string = chatHistoryVersion

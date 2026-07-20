@@ -204,13 +204,14 @@ async def format_as_ndjson(r: AsyncGenerator[dict, None]) -> AsyncGenerator[str,
 
 
 @bp.route("/chat", methods=["POST"])
-@authenticated
-async def chat(auth_claims: dict[str, Any]):
+async def chat():
+    logging.info("=== /chat endpoint called ===")
     if not request.is_json:
         return jsonify({"error": "request must be json"}), 415
     request_json = await request.get_json()
+    logging.info(f"Chat request: messages_count={len(request_json.get('messages', []))}, has_session_state={request_json.get('session_state') is not None}")
     context = request_json.get("context", {})
-    context["auth_claims"] = auth_claims
+    context["auth_claims"] = {}
     try:
         approach: Approach = cast(Approach, current_app.config[CONFIG_CHAT_APPROACH])
 
@@ -222,24 +223,31 @@ async def chat(auth_claims: dict[str, Any]):
                 current_app.config[CONFIG_CHAT_HISTORY_COSMOS_ENABLED],
                 current_app.config[CONFIG_CHAT_HISTORY_BROWSER_ENABLED],
             )
+            logging.info(f"Created new session_state: {session_state}")
+        else:
+            logging.info(f"Using existing session_state: {session_state}")
+        
+        logging.info(f"Calling approach.run() with session_state: {session_state}")
         result = await approach.run(
             request_json["messages"],
             context=context,
             session_state=session_state,
         )
+        logging.info(f"✅ Chat completed successfully, returning result")
         return jsonify(result)
     except Exception as error:
         return error_response(error, "/chat")
 
 
 @bp.route("/chat/stream", methods=["POST"])
-@authenticated
-async def chat_stream(auth_claims: dict[str, Any]):
+async def chat_stream():
+    logging.info("=== /chat/stream endpoint called ===")
     if not request.is_json:
         return jsonify({"error": "request must be json"}), 415
     request_json = await request.get_json()
+    logging.info(f"Chat stream request: messages_count={len(request_json.get('messages', []))}, has_session_state={request_json.get('session_state') is not None}")
     context = request_json.get("context", {})
-    context["auth_claims"] = auth_claims
+    context["auth_claims"] = {}
     try:
         approach: Approach = cast(Approach, current_app.config[CONFIG_CHAT_APPROACH])
 

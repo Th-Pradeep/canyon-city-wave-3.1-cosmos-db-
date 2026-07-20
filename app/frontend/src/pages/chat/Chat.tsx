@@ -2,7 +2,6 @@ import { useRef, useState, useEffect, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { Helmet } from "react-helmet-async";
 import { Panel, DefaultButton } from "@fluentui/react";
-import readNDJSONStream from "ndjson-readablestream";
 
 import appLogo from "../../assets/applogo.svg";
 import styles from "./Chat.module.css";
@@ -148,6 +147,51 @@ const Chat = () => {
         });
     };
 
+    // Native NDJSON stream parser - replaces ndjson-readablestream library
+    async function* parseNDJSONStream(stream: ReadableStream<any>): AsyncGenerator<any, void, unknown> {
+        const reader = stream.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
+                    // Process any remaining data in buffer
+                    if (buffer.trim()) {
+                        try {
+                            yield JSON.parse(buffer);
+                        } catch (e) {
+                            console.error('Error parsing final JSON chunk:', e);
+                        }
+                    }
+                    break;
+                }
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                
+                // Keep the last incomplete line in the buffer
+                buffer = lines.pop() || '';
+                
+                // Parse and yield complete lines
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine) {
+                        try {
+                            yield JSON.parse(trimmedLine);
+                        } catch (e) {
+                            console.error('Error parsing JSON line:', e, 'Line:', trimmedLine);
+                        }
+                    }
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
+    }
+
     const handleAsyncRequest = async (question: string, answers: [string, ChatAppResponse][], responseBody: ReadableStream<any>, signal: AbortSignal) => {
         let answer: string = "";
         let askResponse: ChatAppResponse = {
@@ -172,7 +216,7 @@ const Chat = () => {
         };
         try {
             setIsStreaming(true);
-            for await (const event of readNDJSONStream(responseBody)) {
+            for await (const event of parseNDJSONStream(responseBody)) {
                 if (signal.aborted) {
                     break;
                 }
@@ -223,7 +267,7 @@ const Chat = () => {
     const { loggedIn } = useContext(LoginContext);
 
     const historyProvider: HistoryProviderOptions = (() => {
-        if (useLogin && showChatHistoryCosmos) return HistoryProviderOptions.CosmosDB;
+        if (showChatHistoryCosmos) return HistoryProviderOptions.CosmosDB;
         if (showChatHistoryBrowser) return HistoryProviderOptions.IndexedDB;
         return HistoryProviderOptions.None;
     })();
@@ -594,7 +638,7 @@ const Chat = () => {
             </Helmet>
             <div className={styles.commandsSplitContainer}>
                 <div className={styles.commandsContainer}>
-                    {((useLogin && showChatHistoryCosmos) || showChatHistoryBrowser) && (
+                    {(showChatHistoryCosmos || showChatHistoryBrowser) && (
                         <HistoryButton className={styles.commandButton} onClick={() => setIsHistoryPanelOpen(!isHistoryPanelOpen)} />
                     )}
                 </div>
@@ -697,6 +741,15 @@ const Chat = () => {
                             initQuestion={restoredQuestion}
                         />
                     </div>
+                    <div style={{ 
+                        textAlign: 'center', 
+                        padding: '10px', 
+                        fontSize: '14px', 
+                        color: '#666',
+                        marginTop: '8px'
+                    }}>
+                        AI-generated responses may contain inaccuracies
+                    </div>
                 </div>
 
                 {answers.length > 0 && activeAnalysisPanelTab && (
@@ -711,7 +764,7 @@ const Chat = () => {
                     />
                 )}
 
-                {((useLogin && showChatHistoryCosmos) || showChatHistoryBrowser) && (
+                {(showChatHistoryCosmos || showChatHistoryBrowser) && (
                     <HistoryPanel
                         provider={historyProvider}
                         isOpen={isHistoryPanelOpen}

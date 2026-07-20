@@ -12,13 +12,6 @@ if ($AZURE_ENABLE_GLOBAL_DOCUMENT_ACCESS -eq "true") {
   }
 }
 
-if ($USE_CHAT_HISTORY_COSMOS -eq "true") {
-  if ($AZURE_USE_AUTHENTICATION -ne "true") {
-    Write-Host "AZURE_ENABLE_GLOBAL_DOCUMENT_ACCESS, AZURE_ENFORCE_ACCESS_CONTROL, or USE_CHAT_HISTORY_COSMOS is set to true, but AZURE_USE_AUTHENTICATION is not set to true. Please set and retry."
-    Exit 1
-  }
-}
-
 if ($AZURE_USE_AUTHENTICATION -ne "true") {
   Write-Host "AZURE_USE_AUTHENTICATION is not set, skipping authentication setup."
   Exit 0
